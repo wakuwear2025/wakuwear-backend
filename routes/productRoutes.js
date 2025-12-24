@@ -5,15 +5,22 @@ const router = express.Router();
 console.log('✅ productRoutes loaded with SEED route');
 
 
-// GET /products
+// GET /products (with optional category filter)
 router.get('/', async (req, res) => {
   try {
-    const products = await Product.find({ isActive: true });
+    const filter = { isActive: true };
+
+    if (req.query.category) {
+      filter.category = req.query.category;
+    }
+
+    const products = await Product.find(filter);
     res.json(products);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch products' });
   }
 });
+
 // TEMP: seed products
 router.get('/seed', async (req, res) => {
   try {
