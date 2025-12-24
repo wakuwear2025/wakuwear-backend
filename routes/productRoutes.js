@@ -2,6 +2,8 @@ const express = require('express');
 const Product = require('../models/Product.js');
 
 const router = express.Router();
+console.log('✅ productRoutes loaded with SEED route');
+
 
 // GET /products
 router.get('/', async (req, res) => {
