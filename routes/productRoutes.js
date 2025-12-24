@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
   }
 });
 // TEMP: seed products
-router.post('/seed', async (req, res) => {
+router.get('/seed', async (req, res) => {
   try {
     await Product.deleteMany();
 
