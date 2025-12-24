@@ -1,75 +1,76 @@
 const mongoose = require('mongoose');
 
+const OrderItemSchema = new mongoose.Schema({
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product',
+  },
+  title: String,
+  quantity: Number,
+  price: Number,
+  sku: {
+    type: String,
+    default: '',
+  },
+});
+
+const AddressSchema = new mongoose.Schema({
+  name: String,
+  phone: String,
+  address: String,
+  city: String,
+  state: {
+    type: String,
+    default: 'NA',
+  },
+  pincode: String,
+  country: {
+    type: String,
+    default: 'India',
+  },
+});
+
 const OrderSchema = new mongoose.Schema(
   {
-    items: [
-      {
-        productId: mongoose.Schema.Types.ObjectId,
-        title: String,
-        price: Number,
-        quantity: Number,
-
-        // Shiprocket-ready fields
-        sku: {
-          type: String,
-          default: 'WK-DEFAULT',
-        },
-        weight: {
-          type: Number, // in kg
-          default: 0.5,
-        },
-      },
-    ],
-
-    totalAmount: Number,
-
-    customer: {
-      name: String,
-      phone: String,
-      address: String,
-      city: String,
-      pincode: String,
-      state: {
-        type: String,
-        default: 'India',
-      },
-      country: {
-        type: String,
-        default: 'India',
-      },
+    orderRef: {
+      type: String,
+      unique: true,
     },
+
+    items: [OrderItemSchema],
+
+    customer: AddressSchema,
 
     paymentMethod: {
       type: String,
-      enum: ['COD', 'ONLINE'],
+      enum: ['COD', 'PREPAID'],
       default: 'COD',
     },
 
-    isCOD: {
-      type: Boolean,
-      default: true,
-    },
+    totalAmount: Number,
 
     status: {
       type: String,
-      enum: ['PLACED', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED'],
+      enum: [
+        'PLACED',
+        'CONFIRMED',
+        'SHIPPED',
+        'DELIVERED',
+        'CANCELLED',
+        'RTO',
+      ],
       default: 'PLACED',
     },
 
-    // Shiprocket-ready dimensions (cm)
-    shipment: {
-      length: {
-        type: Number,
-        default: 30,
-      },
-      breadth: {
-        type: Number,
-        default: 25,
-      },
-      height: {
-        type: Number,
-        default: 5,
-      },
+    // 🔑 Shiprocket readiness
+    shipmentId: String,
+    awbCode: String,
+    courierName: String,
+    shiprocketStatus: String,
+
+    isCod: {
+      type: Boolean,
+      default: true,
     },
   },
   { timestamps: true }
