@@ -39,5 +39,21 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * ADMIN: GET ALL ORDERS
+ * /orders/admin
+ */
+router.get('/admin/all', async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .sort({ createdAt: -1 });
+
+    res.json(orders);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch orders' });
+  }
+});
+
 module.exports = router;
 
