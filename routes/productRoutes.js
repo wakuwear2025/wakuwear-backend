@@ -48,6 +48,15 @@ router.get('/seed', async (req, res) => {
     res.status(500).json({ message: 'Seed failed' });
   }
 });
+// GET /products/:id
+router.get('/:id', async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    res.json(product);
+  } catch (err) {
+    res.status(404).json({ message: 'Product not found' });
+  }
+});
 
 
 module.exports = router;
