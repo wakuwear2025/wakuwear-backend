@@ -1,69 +1,37 @@
 const express = require('express');
-const Product = require('../models/Product.js');
+const Product = require('../models/product');
 
 const router = express.Router();
-console.log('✅ productRoutes loaded with SEED route');
 
-
-// GET /products (with optional category filter)
+/**
+ * GET /products
+ * Query params:
+ * ?gender=men | women | kids
+ * ?category=men_tshirts | women_jeans | etc
+ * ?sort=new | price_asc | price_desc
+ */
 router.get('/', async (req, res) => {
   try {
+    const { gender, category, sort } = req.query;
+
     const filter = { isActive: true };
 
-    if (req.query.category) {
-      filter.category = req.query.category;
-    }
+    if (gender) filter.gender = gender;
+    if (category) filter.category = category;
 
-    const products = await Product.find(filter);
+    let sortOption = { createdAt: -1 }; // default: New arrivals
+
+    if (sort === 'price_asc') sortOption = { price: 1 };
+    if (sort === 'price_desc') sortOption = { price: -1 };
+
+    const products = await Product.find(filter).sort(sortOption);
+
     res.json(products);
-  } catch (err) {
+  } catch (error) {
+    console.error('Product fetch error:', error);
     res.status(500).json({ message: 'Failed to fetch products' });
   }
 });
 
-// TEMP: seed products
-router.get('/seed', async (req, res) => {
-  try {
-    await Product.deleteMany();
-
-    const products = await Product.insertMany([
-      {
-        title: 'Wakuwear Winter Hoodie',
-        price: 1999,
-        mrp: 2999,
-        image: 'https://picsum.photos/400/500?1',
-        category: 'winter',
-      },
-      {
-        title: 'Wakuwear Minimal Tee',
-        price: 999,
-        mrp: 1499,
-        image: 'https://picsum.photos/400/500?2',
-        category: 'men',
-      },
-      {
-        title: 'Wakuwear Oversized Sweatshirt',
-        price: 1799,
-        mrp: 2499,
-        image: 'https://picsum.photos/400/500?3',
-        category: 'winter',
-      },
-    ]);
-
-    res.json(products);
-  } catch (err) {
-    res.status(500).json({ message: 'Seed failed' });
-  }
-});
-// GET /products/:id
-router.get('/:id', async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
-    res.json(product);
-  } catch (err) {
-    res.status(404).json({ message: 'Product not found' });
-  }
-});
-
-
 module.exports = router;
+
