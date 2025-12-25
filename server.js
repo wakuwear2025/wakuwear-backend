@@ -2,6 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
+const couponRoutes = require('./routes/couponRoutes');
+
+app.use('/coupons', couponRoutes);
 
 /* ROUTES */
 const productRoutes = require('./routes/productRoutes');
