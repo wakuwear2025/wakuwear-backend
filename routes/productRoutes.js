@@ -1,37 +1,24 @@
 const express = require('express');
-const Product = require('../models/product');
+const Product = require('../models/Product');
 
 const router = express.Router();
 
-/**
- * GET /products
- * Query params:
- * ?gender=men | women | kids
- * ?category=men_tshirts | women_jeans | etc
- * ?sort=new | price_asc | price_desc
- */
 router.get('/', async (req, res) => {
   try {
-    const { gender, category, sort } = req.query;
-
-    const filter = { isActive: true };
-
-    if (gender) filter.gender = gender;
-    if (category) filter.category = category;
-
-    let sortOption = { createdAt: -1 }; // default: New arrivals
-
-    if (sort === 'price_asc') sortOption = { price: 1 };
-    if (sort === 'price_desc') sortOption = { price: -1 };
-
-    const products = await Product.find(filter).sort(sortOption);
-
+    const products = await Product.find({ isActive: true });
     res.json(products);
-  } catch (error) {
-    console.error('Product fetch error:', error);
+  } catch (err) {
     res.status(500).json({ message: 'Failed to fetch products' });
   }
 });
 
-module.exports = router;
+router.get('/:id', async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    res.json(product);
+  } catch (err) {
+    res.status(404).json({ message: 'Product not found' });
+  }
+});
 
+module.exports = router;
