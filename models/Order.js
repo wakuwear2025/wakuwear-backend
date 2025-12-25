@@ -1,80 +1,47 @@
 const mongoose = require('mongoose');
 
-const OrderItemSchema = new mongoose.Schema({
-  productId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product',
-  },
-  title: String,
-  quantity: Number,
-  price: Number,
-  sku: {
-    type: String,
-    default: '',
-  },
-});
-
-const AddressSchema = new mongoose.Schema({
-  name: String,
-  phone: String,
-  address: String,
-  city: String,
-  state: {
-    type: String,
-    default: 'NA',
-  },
-  pincode: String,
-  country: {
-    type: String,
-    default: 'India',
-  },
-});
-
-const OrderSchema = new mongoose.Schema(
+const orderSchema = new mongoose.Schema(
   {
-    orderRef: {
-      type: String,
-      unique: true,
-    },
+    name: String,
+    phone: String,
+    address: String,
+    city: String,
+    pincode: String,
 
-    items: [OrderItemSchema],
+    items: [
+      {
+        productId: String,
+        title: String,
+        price: Number,
+        quantity: Number,
+      },
+    ],
 
-    customer: AddressSchema,
+    total: Number,
 
     paymentMethod: {
       type: String,
-      enum: ['COD', 'PREPAID'],
       default: 'COD',
     },
 
-    totalAmount: Number,
-
     status: {
       type: String,
-      enum: [
-        'PLACED',
-        'CONFIRMED',
-        'SHIPPED',
-        'DELIVERED',
-        'CANCELLED',
-        'RTO',
-      ],
-      default: 'PLACED',
+      default: 'pending',
     },
 
-    // 🔑 Shiprocket readiness
-    shipmentId: String,
-    awbCode: String,
-    courierName: String,
-    shiprocketStatus: String,
-
-    isCod: {
-      type: Boolean,
-      default: true,
+    shipment: {
+      awb: String,
+      courier: String,
+      status: {
+        type: String,
+        default: 'not_created',
+      },
+      rtoReason: String,
     },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Order', OrderSchema);
+module.exports = mongoose.model('Order', orderSchema);
+
 
