@@ -1,23 +1,50 @@
-const express = require('express');
-const Coupon = require('../models/Coupon');
+const express = require("express");
+const Coupon = require("../models/Coupon");
 
 const router = express.Router();
 
-/* CREATE COUPON (ADMIN) */
-router.post('/', async (req, res) => {
+/**
+ * GET all coupons
+ */
+router.get("/", async (req, res) => {
   try {
-    const coupon = await Coupon.create(req.body);
-    res.json(coupon);
+    const coupons = await Coupon.find().sort({ createdAt: -1 });
+    res.json(coupons);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(500).json({ message: "Failed to fetch coupons" });
   }
 });
 
-/* LIST COUPONS */
-router.get('/', async (req, res) => {
-  const coupons = await Coupon.find().sort({ createdAt: -1 });
-  res.json(coupons);
+/**
+ * CREATE coupon
+ */
+router.post("/", async (req, res) => {
+  try {
+    const { code, discount } = req.body;
+
+    if (!code || !discount) {
+      return res.status(400).json({ message: "Missing fields" });
+    }
+
+    const existing = await Coupon.findOne({ code });
+    if (existing) {
+      return res.status(400).json({ message: "Coupon already exists" });
+    }
+
+    const coupon = new Coupon({
+      code: code.toUpperCase(),
+      discount: Number(discount),
+    });
+
+    await coupon.save();
+    res.status(201).json(coupon);
+  } catch (err) {
+    console.error("Coupon create error:", err);
+    res.status(500).json({ message: "Failed to create coupon" });
+  }
 });
 
 module.exports = router;
+
+
 
