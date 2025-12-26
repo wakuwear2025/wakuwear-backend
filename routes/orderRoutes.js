@@ -1,133 +1,124 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Order = require('../models/Order');
+const Coupon = require('../models/Coupon');
+const CouponUsage = require('../models/CouponUsage');
+const applyCoupon = require('../utils/applyCoupon');
 
 const router = express.Router();
 
 /**
- * =========================
- * CREATE ORDER (CUSTOMER)
- * =========================
+ * CREATE ORDER
  */
 router.post('/', async (req, res) => {
   try {
-    const { items, customer, totalAmount, paymentMethod } = req.body;
+    const {
+      items,
+      phone,
+      address,
+      name,
+      paymentMethod = 'COD',
+      couponCode,
+    } = req.body;
 
-    if (!items || !customer || !totalAmount) {
-      return res.status(400).json({ message: 'Missing order data' });
+    if (!items || items.length === 0) {
+      return res.status(400).json({ message: 'No items in order' });
     }
 
-    // 🔑 Clean merchant order reference (Shiprocket-friendly)
-    const orderRef = `WK-${Date.now()}`;
+    // Calculate cart total
+    const cartTotal = items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
 
-    const order = new Order({
-      orderRef,
-      items: items.map(item => ({
-        productId: item._id,
-        title: item.title,
-        quantity: item.quantity,
-        price: item.price,
-        sku: item.sku || '',
-      })),
-      customer: {
-        name: customer.name,
-        phone: customer.phone,
-        address: customer.address,
-        city: customer.city,
-        state: customer.state || 'NA',
-        pincode: customer.pincode,
-        country: 'India',
-      },
-      totalAmount,
-      paymentMethod: paymentMethod || 'COD',
-      isCod: paymentMethod !== 'PREPAID',
+    let discount = 0;
+    let allowCOD = true;
+    let appliedCoupon = null;
+
+    /**
+     * APPLY COUPON (if provided)
+     */
+    if (couponCode) {
+      const result = await applyCoupon({
+        couponCode,
+        phone,
+        cartTotal,
+      });
+
+      discount = result.discount;
+      allowCOD = result.allowCOD;
+      appliedCoupon = result.coupon.code;
+
+      // Save usage
+      await CouponUsage.create({
+        couponCode: result.coupon.code,
+        phone,
+        discountAmount: discount,
+      });
+
+      // Increment coupon usage count
+      await Coupon.updateOne(
+        { code: result.coupon.code },
+        { $inc: { usedCount: 1 } }
+      );
+    }
+
+    /**
+     * ENFORCE COD RULES
+     */
+    let finalPaymentMethod = paymentMethod;
+    if (!allowCOD && paymentMethod === 'COD') {
+      finalPaymentMethod = 'PREPAID';
+    }
+
+    /**
+     * CREATE ORDER
+     */
+    const order = await Order.create({
+      items,
+      phone,
+      address,
+      name,
+      cartTotal,
+      discount,
+      finalAmount: cartTotal - discount,
+      paymentMethod: finalPaymentMethod,
+      couponCode: appliedCoupon,
+      allowCOD,
       status: 'PLACED',
     });
 
-    await order.save();
-
-    res.status(201).json(order);
+    res.json({
+      success: true,
+      orderId: order._id,
+      finalAmount: order.finalAmount,
+      paymentMethod: finalPaymentMethod,
+    });
   } catch (err) {
-    console.error('Order create error:', err);
-    res.status(500).json({ message: 'Failed to place order' });
+    console.error('Order error:', err);
+    res.status(400).json({ message: err.toString() });
   }
 });
 
 /**
- * =========================
- * GET CUSTOMER ORDERS (BY PHONE)
- * =========================
+ * GET ORDERS BY PHONE (MY ORDERS)
  */
-router.get('/', async (req, res) => {
-  const { phone } = req.query;
+router.get('/my/:phone', async (req, res) => {
+  const orders = await Order.find({ phone: req.params.phone })
+    .sort({ createdAt: -1 });
 
-  if (!phone) {
-    return res.status(400).json({ message: 'Phone number required' });
-  }
-
-  try {
-    const orders = await Order.find({
-      'customer.phone': phone,
-    }).sort({ createdAt: -1 });
-
-    res.json(orders);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch orders' });
-  }
+  res.json(orders);
 });
 
 /**
- * =========================
- * GET SINGLE ORDER (OPTIONAL)
- * =========================
- */
-router.get('/:id', async (req, res) => {
-  try {
-    const order = await Order.findById(req.params.id);
-    res.json(order);
-  } catch (err) {
-    res.status(404).json({ message: 'Order not found' });
-  }
-});
-
-/**
- * =========================
  * ADMIN: GET ALL ORDERS
- * =========================
  */
 router.get('/admin/all', async (req, res) => {
-  try {
-    const orders = await Order.find().sort({ createdAt: -1 });
-    res.json(orders);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch admin orders' });
-  }
-});
-
-/**
- * =========================
- * ADMIN: UPDATE ORDER STATUS
- * =========================
- */
-router.patch('/admin/:id/status', async (req, res) => {
-  const { status } = req.body;
-
-  if (!status) {
-    return res.status(400).json({ message: 'Status required' });
-  }
-
-  try {
-    const order = await Order.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
-
-    res.json(order);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to update order status' });
-  }
+  const orders = await Order.find().sort({ createdAt: -1 });
+  res.json(orders);
 });
 
 module.exports = router;
+
 
 
